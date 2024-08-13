@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase Data Upload</title>
+    <style>
+        #loader {
+            display: none;
+            margin-top: 20px;
+        }
+        #progressBar {
+            width: 300px;
+            height: 20px;
+            background-color: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        #progressFill {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 0%;
+            transition: width 0.5s;
+        }
+    </style>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+        const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID",
+    measurementId: "YOUR_MEASUREMENT_ID"
+};
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.uploadData = async function() {
+            const fileInput = document.getElementById('jsonFile');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const data = JSON.parse(e.target.result);
+                    const collectionName = Object.keys(data)[0];
+                    const collectionData = data[collectionName];
+                    const totalDocs = collectionData.length;
+                    let uploadedDocs = 0;
+
+                    // Show loader
+                    document.getElementById('loader').style.display = 'block';
+
+                    for (const doc of collectionData) {
+                        try {
+                            const docRef = await addDoc(collection(db, collectionName), doc);
+                            console.log("Document written with ID: ", docRef.id);
+                            uploadedDocs++;
+                            updateProgress(uploadedDocs, totalDocs);
+                        } catch (error) {
+                            console.error("Error adding document: ", error);
+                        }
+                    }
+
+                    // Hide loader when complete
+                    document.getElementById('loader').style.display = 'none';
+                };
+                reader.readAsText(file);
+            } else {
+                console.error("No file selected");
+            }
+        }
+
+        function updateProgress(uploaded, total) {
+            const percentage = (uploaded / total) * 100;
+            document.getElementById('progressFill').style.width = percentage + '%';
+            document.getElementById('progressText').innerText = `Uploaded ${uploaded} of ${total} documents`;
+        }
+    </script>
+</head>
+<body>
+    <h1>Firebase Data Upload</h1>
+    <input type="file" id="jsonFile" accept=".json">
+    <button onclick="uploadData()">Upload Data</button>
+    <div id="loader">
+        <div id="progressBar">
+            <div id="progressFill"></div>
+        </div>
+        <p id="progressText"></p>
+    </div>
+</body>
+</html>
